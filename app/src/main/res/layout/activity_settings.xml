@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="How often should we fetch new data? 0 means always fetch new data."
+        android:id="@+id/settingsHeaderTxt"
+        android:textSize="20dp"
+        android:textColor="#ff33b5e5" />
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:weightSum="1"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:gravity="center">
+
+        <SeekBar
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/seekBarSwitch"
+            android:layout_weight="0.63"
+            android:layout_marginRight="25dp"
+            android:indeterminate="false" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="25dp"
+            android:text="0 hours"
+            android:id="@+id/seekBarTxt"
+            android:textColor="#ff33b5e5"
+            android:textSize="20dp" />
+
+    </LinearLayout>
+
+    <Switch
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sort currencies A-Z"
+        android:id="@+id/sortSwitch"
+        android:checked="false"
+        android:textSize="20dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:textColor="#ff33b5e5" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Save &amp; Exit"
+        android:id="@+id/saveBtn"
+        android:textSize="20dp"
+        android:layout_marginTop="20dp" />
+
+</LinearLayout>
