@@ -7,6 +7,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -58,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<String> fromListViewAdapter;
     private ArrayAdapter<String> toListViewAdapter;
 
+    private Parcelable fromListViewState;
+    private Parcelable toListViewState;
+
     private View fromView;
     private View toView;
 
@@ -67,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView result;
 
-    private boolean isSortedAZ = false;
+    private boolean isSortedAZ = true;
 
     private long timeBetweenUpdates = TimeUnit.HOURS.toMillis(24);
 
@@ -177,7 +181,6 @@ public class MainActivity extends AppCompatActivity {
         convert.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 String fromAmount = amount.getText().toString();
                 if (fromListViewItem != null && toListViewItem != null && fromAmount.length() > 0) {
                     //Computing result
@@ -236,27 +239,48 @@ public class MainActivity extends AppCompatActivity {
 
         outState.putInt("FROM_LIST_POSITION", fromListViewPosition);
         outState.putInt("TO_LIST_POSITION", toListViewPosition);
+
+        outState.putBoolean("IS_SORTED_AZ", isSortedAZ);
+        outState.putLong("TIME_BETWEEN_UPDATES", timeBetweenUpdates);
+
+//        fromListViewState = fromListView.onSaveInstanceState();
+//        toListViewState = toListView.onSaveInstanceState();
+
+//        outState.putParcelable("fromListViewState", fromListViewState);
+//        outState.putParcelable("toListViewState", toListViewState);
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        System.out.println("MainActivity.. onRestoreInstanceState..");
+        System.out.println();
+        if(savedInstanceState != null) {
+            System.out.println("MainActivity.. onRestoreInstanceState..");
 
-        fromListViewItem = savedInstanceState.getString("FROM_LIST_VIEW_ITEM");
-        toListViewItem = savedInstanceState.getString("TO_LIST_VIEW_ITEM");
+            fromListViewItem = savedInstanceState.getString("FROM_LIST_VIEW_ITEM");
+            toListViewItem = savedInstanceState.getString("TO_LIST_VIEW_ITEM");
 
-        String amountText = savedInstanceState.getString("AMOUNT_TEXT");
-        amount.setText(amountText);
+            String amountText = savedInstanceState.getString("AMOUNT_TEXT");
+            amount.setText(amountText);
 
-        String resultText = savedInstanceState.getString("RESULT_TEXT");
-        result.setText(resultText);
+            String resultText = savedInstanceState.getString("RESULT_TEXT");
+            result.setText(resultText);
 
-        fromListViewPosition = savedInstanceState.getInt("FROM_LIST_POSITION");
-        toListViewPosition = savedInstanceState.getInt("TO_LIST_POSITION");
+            fromListViewPosition = savedInstanceState.getInt("FROM_LIST_POSITION");
+            toListViewPosition = savedInstanceState.getInt("TO_LIST_POSITION");
 
-//        fromListView.getChildAt(fromListViewPosition).setSelected(true);
-//        toListView.getChildAt(toListViewPosition).setSelected(true);
+    //        fromListView.getChildAt(fromListViewPosition).setSelected(true);
+    //        toListView.getChildAt(toListViewPosition).setSelected(true);
+
+            isSortedAZ = savedInstanceState.getBoolean("IS_SORTED_AZ");
+            timeBetweenUpdates = savedInstanceState.getLong("TIME_BETWEEN_UPDATES");
+
+//            fromListView = savedInstanceState.getParcelable("fromListViewState");
+//            toListView = savedInstanceState.getParcelable("toListViewState");
+
+//            fromListView.onRestoreInstanceState(fromListViewState);
+//            toListView.onRestoreInstanceState(toListViewState);
+        }
     }
 
     @Override
@@ -303,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
                 if (timeInLong + timeBetweenUpdates > new Date().getTime() || !isConnected) {
                     System.out.println("(FILE EXISTS) and (file is up to date) or (we are NOT connected to the Internet)\n");
                     fileInputStream = openFileInput("Data");
-                    getDataFromLocalFile = new GetDataFromLocalFile(fileInputStream);
+                    getDataFromLocalFile = new GetDataFromLocalFile(getApplicationContext(), fileInputStream, isSortedAZ);
                     getDataFromLocalFile.execute(currencies, listViewData, fromListViewAdapter, toListViewAdapter);
                     Toast.makeText(getApplicationContext(), "Warning! \nData might be out of date!", Toast.LENGTH_SHORT).show();
                 }
@@ -311,14 +335,14 @@ public class MainActivity extends AppCompatActivity {
                 else if (isConnected) {
                     System.out.println("(FILE EXISTS) and (file is NOT up to date) and (we are connected to the Internet)");
                     outputStream = openFileOutput("Data", Context.MODE_PRIVATE);
-                    getDataFromInternet = new GetDataFromInternet();
+                    getDataFromInternet = new GetDataFromInternet(getApplicationContext(), isSortedAZ);
                     getDataFromInternet.execute(currencies, listViewData, outputStream, fromListViewAdapter, toListViewAdapter);
                 }
                 //(FILE DOESN'T EXIST) and (we are connected to the Internet)
             } else if (isConnected) {
                 System.out.println("(FILE DOESN'T EXIST) and (we are connected to the Internet)\n");
                 outputStream = openFileOutput("Data", Context.MODE_PRIVATE);
-                getDataFromInternet = new GetDataFromInternet();
+                getDataFromInternet = new GetDataFromInternet(getApplicationContext(), isSortedAZ);
                 getDataFromInternet.execute(currencies, listViewData, outputStream, fromListViewAdapter, toListViewAdapter);
                 //(FILE DOESN'T EXIST) and (we are NOT connected to the Internet)
             } else if (!isConnected) {
