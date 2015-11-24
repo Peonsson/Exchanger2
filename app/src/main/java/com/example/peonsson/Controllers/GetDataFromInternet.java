@@ -22,35 +22,23 @@ import Models.Currency;
 /**
  * Created by Peonsson on 2015-11-19.
  */
-public class GetDataFromInternet extends AsyncTask<Object, Void, ArrayList<String>> {
+public class GetDataFromInternet extends AsyncTask<Object, Void, ArrayList<Currency>> {
 
     private static final String url = "http://maceo.sth.kth.se/Home/eurofxref";
-    private final Context context;
-    private final boolean isSortedAZ;
 
-    private ArrayList<Currency> currencies;
+    private ArrayList<Currency> tempCurrencies = new ArrayList<Currency>(25);
     private OutputStream outputStream;
-    private ArrayList<String> listViewData;
-    private ArrayList<String> tempListViewData = new ArrayList<String>(25);
-    private ArrayAdapter<String> fromListViewAdapter;
-    private ArrayAdapter<String> toListViewAdapter;
+    private MainActivity activity;
 
-    public GetDataFromInternet(Context context, boolean isSortedAZ) {
-        this.context = context;
-        this.isSortedAZ = isSortedAZ;
+    public GetDataFromInternet(MainActivity activity) {
+        this.activity = activity;
     }
 
     @Override
-    protected ArrayList<String> doInBackground(Object... params) {
+    protected ArrayList<Currency> doInBackground(Object... params) {
         System.out.println("Executing.. GetDataFromInternet.. doInBackground.. ");
 
-        currencies =(ArrayList<Currency>) params[0];
-        listViewData =(ArrayList<String>) params[1];
-        outputStream = (OutputStream) params[2];
-        fromListViewAdapter = (ArrayAdapter<String>) params[3];
-        toListViewAdapter = (ArrayAdapter<String>) params[4];
-        currencies.clear();
-        tempListViewData.add("EUR");
+        outputStream = (OutputStream) params[0];
 
         HttpURLConnection http = null;
         InputStream istream = null;
@@ -58,7 +46,7 @@ public class GetDataFromInternet extends AsyncTask<Object, Void, ArrayList<Strin
         try {
             //add time as long to top of document
             outputStream.write((Long.toString(new Date().getTime()) + "\n").getBytes());
-            currencies.add(new Currency("EUR", "1"));
+            tempCurrencies.add(new Currency("EUR", "1"));
 
             URL text = new URL(url);
             http = (HttpURLConnection) text.openConnection();
@@ -79,8 +67,7 @@ public class GetDataFromInternet extends AsyncTask<Object, Void, ArrayList<Strin
                     }
                     else if(xpp.getAttributeCount() == 2 && xpp.getAttributeName(0).equalsIgnoreCase("currency") && xpp.getAttributeName(1).equalsIgnoreCase("rate")) {
                         writeToFile = xpp.getAttributeValue(0) + " " + xpp.getAttributeValue(1) + "\n";
-                        currencies.add(new Currency(xpp.getAttributeValue(0), xpp.getAttributeValue(1)));
-                        tempListViewData.add(xpp.getAttributeValue(0));
+                        tempCurrencies.add(new Currency(xpp.getAttributeValue(0), xpp.getAttributeValue(1)));
                         outputStream.write(writeToFile.getBytes());
                     }
                 }
@@ -91,33 +78,14 @@ public class GetDataFromInternet extends AsyncTask<Object, Void, ArrayList<Strin
         } catch (XmlPullParserException e) {
             e.printStackTrace();
         }
-        return tempListViewData;
+        return tempCurrencies;
     }
 
     @Override
-    protected void onPostExecute(ArrayList<String> strings) {
+    protected void onPostExecute(ArrayList<Currency> strings) {
         super.onPostExecute(strings);
         System.out.println("GetDataFromInternet.. onPostExecute..");
-
-        if(isSortedAZ) {
-            Collections.sort(strings);
-        } else {
-            Collections.sort(strings);
-            Collections.reverse(strings);
-        }
-
-        System.out.println(strings);
-//        listViewData = tempListViewData;
-
-//        fromListViewAdapter = new CustomAdapter(context, strings);
-        fromListViewAdapter.clear();
-        fromListViewAdapter.addAll(strings);
-        fromListViewAdapter.notifyDataSetChanged();
-//        toListViewAdapter = new CustomAdapter(context, strings);
-
-        toListViewAdapter.clear();
-        toListViewAdapter.addAll(strings);
-        toListViewAdapter.notifyDataSetChanged();
+        activity.updateUI(strings);
 
         try {
             outputStream.close();

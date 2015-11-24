@@ -28,4 +28,9 @@ public class Currency {
     public void setRate(String rate) {
         this.rate = rate;
     }
+
+    @Override
+    public String toString() {
+        return getName();
+    }
 }

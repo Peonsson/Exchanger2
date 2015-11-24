@@ -18,6 +18,14 @@
         android:focusableInTouchMode="true"
         android:weightSum="1">
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="Date"
+            android:id="@+id/textView5"
+            android:textSize="15dp" />
+
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="fill_parent"
@@ -81,13 +89,6 @@
             android:ems="10"
             android:id="@+id/editText"
             android:width="400dp"
-            android:textSize="15dp" />
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Convert"
-            android:id="@+id/button"
             android:textSize="15dp" />
 
         <TextView

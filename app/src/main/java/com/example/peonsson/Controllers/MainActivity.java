@@ -13,6 +13,8 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -34,17 +36,21 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import Models.Currencies;
 import Models.Currency;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ArrayList<Currency> currencies = new ArrayList<Currency>(25);
-    private ArrayList<String> listViewData = new ArrayList<String>(25);
+    private Currencies myCurrencies = new Currencies();
 
     private GetDataFromInternet getDataFromInternet;
     private GetDataFromLocalFile getDataFromLocalFile;
@@ -59,23 +65,18 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<String> fromListViewAdapter;
     private ArrayAdapter<String> toListViewAdapter;
 
-    private Parcelable fromListViewState;
-    private Parcelable toListViewState;
-
-    private View fromView;
-    private View toView;
-
     private EditText amount;
 
-    private Button convert;
-
     private TextView result;
+    private TextView date;
 
     private boolean isSortedAZ = true;
 
-    private long timeBetweenUpdates = TimeUnit.HOURS.toMillis(24);
+    private long timeBetweenUpdates = TimeUnit.HOURS.toMillis(1);
 
     private static final int REQUEST_CODE_SETTINGS = 100;
+
+    long timeInLong;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,33 +95,80 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        date = (TextView) findViewById(R.id.textView5);
+
         //fromListView
         fromListView = (ListView) findViewById(R.id.listView);
-        fromListViewAdapter = new CustomAdapter(this, listViewData);
+        fromListViewAdapter = new CustomAdapter(this, myCurrencies.getList(isSortedAZ));
         fromListView.setAdapter(fromListViewAdapter);
         fromListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 fromListViewItem = (String) parent.getItemAtPosition(position);
                 System.out.println(parent.getItemAtPosition(position));
-                fromView = view;
                 fromListViewPosition = position;
+
+                //Computing result
+                ArrayList<Currency> currencies = myCurrencies.getCurrencies();
+                for (int i = 0; i < currencies.size(); i++) {
+                    if (currencies.get(i).getName().equalsIgnoreCase(fromListViewItem)) {
+                        double rate = Double.parseDouble(currencies.get(i).getRate());
+                        for (int j = 0; j < currencies.size(); j++) {
+                            if (currencies.get(j).getName().equalsIgnoreCase(toListViewItem)) {
+                                if (amount.getText().toString() != null && !amount.getText().toString().equals("")) {
+                                    double amountToConvert = Double.parseDouble(amount.getText().toString());
+                                    double doubleResult = (amountToConvert / rate) * Double.parseDouble(currencies.get(j).getRate());
+                                    String showResult = String.format("%.1f", doubleResult);
+                                    result.setText(amountToConvert + " " + currencies.get(i).getName() + " --> " + currencies.get(j).getName() + " = " + showResult);
+                                    System.out.println("onItemClick");
+                                    break;
+                                } else {
+                                    result.setText("Result goes here");
+                                }
+                            }
+                        }
+                    }
+                }
             }
         });
 
         //toListView
         toListView = (ListView) findViewById(R.id.listView2);
-        toListViewAdapter = new CustomAdapter(this, listViewData);
+        toListViewAdapter = new CustomAdapter(this, myCurrencies.getList(isSortedAZ));
         toListView.setAdapter(toListViewAdapter);
         toListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 toListViewItem = (String) parent.getItemAtPosition(position);
                 System.out.println(parent.getItemAtPosition(position));
-                toView = view;
                 toListViewPosition = position;
+
+                //Computing result
+                ArrayList<Currency> currencies = myCurrencies.getCurrencies();
+                for (int i = 0; i < currencies.size(); i++) {
+                    if (currencies.get(i).getName().equalsIgnoreCase(fromListViewItem)) {
+                        double rate = Double.parseDouble(currencies.get(i).getRate());
+                        for (int j = 0; j < currencies.size(); j++) {
+                            if (currencies.get(j).getName().equalsIgnoreCase(toListViewItem)) {
+                                if (amount.getText().toString() != null && !amount.getText().toString().equals("")) {
+                                    double amountToConvert = Double.parseDouble(amount.getText().toString());
+                                    double doubleResult = (amountToConvert / rate) * Double.parseDouble(currencies.get(j).getRate());
+                                    String showResult = String.format("%.1f", doubleResult);
+                                    result.setText(amountToConvert + " " + currencies.get(i).getName() + " --> " + currencies.get(j).getName() + " = " + showResult);
+                                    System.out.println("onItemClick");
+                                    break;
+                                } else {
+                                    result.setText("Result goes here");
+                                }
+                            }
+                        }
+                    }
+                }
             }
         });
+
+        //result
+        result = (TextView) findViewById(R.id.textView4);
 
         //amount
         amount = (EditText) findViewById(R.id.editText);
@@ -135,80 +183,38 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        amount.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
+        amount.addTextChangedListener(new TextWatcher() {
 
-                    String fromAmount = amount.getText().toString();
-                    //Handling user input
-                    if (fromListViewItem == null || toListViewItem == null || fromAmount.length() <= 0) {
-                        if (fromAmount.length() == 0 && (toListViewItem == null || fromListViewItem == null)) {
-                            Toast.makeText(getApplicationContext(), "Choose currencies and enter amount.", Toast.LENGTH_SHORT).show();
-                        } else if(fromAmount.length() == 0 && toListViewItem != null && fromListViewItem != null){
-                            Toast.makeText(getApplicationContext(), "Enter amount", Toast.LENGTH_SHORT).show();
-                        } else if(fromAmount.length() > 0 && (toListViewItem == null || fromListViewItem == null)) {
-                            Toast.makeText(getApplicationContext(), "Choose currencies", Toast.LENGTH_SHORT).show();
-                        }
-                        return false;
-                    }
-                    //Computing result
-                    for (int i = 0; i < currencies.size(); i++) {
-                        if (currencies.get(i).getName().equalsIgnoreCase(fromListViewItem)) {
-                            double rate = Double.parseDouble(currencies.get(i).getRate());
-                            for (int j = 0; j < currencies.size(); j++) {
-                                if (currencies.get(j).getName().equalsIgnoreCase(toListViewItem)) {
-                                    double amountToConvert = Double.parseDouble(amount.getText().toString());
-                                    double doubleResult = (amountToConvert / rate) * Double.parseDouble(currencies.get(j).getRate());
-                                    String showResult = String.format("%.1f", doubleResult);
-                                    result.setText(amountToConvert + " " + currencies.get(i).getName() + " --> " + currencies.get(j).getName() + " = " + showResult);
-                                    amount.setText("");
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-                return false;
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
-        });
 
-        //result
-        result = (TextView) findViewById(R.id.textView4);
-
-        //convert button
-        convert = (Button) findViewById(R.id.button);
-        convert.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-                String fromAmount = amount.getText().toString();
-                if (fromListViewItem != null && toListViewItem != null && fromAmount.length() > 0) {
-                    //Computing result
-                    for (int i = 0; i < currencies.size(); i++) {
-                        if (currencies.get(i).getName().equalsIgnoreCase(fromListViewItem)) {
-                            double rate = Double.parseDouble(currencies.get(i).getRate());
-                            for (int j = 0; j < currencies.size(); j++) {
-                                if (currencies.get(j).getName().equalsIgnoreCase(toListViewItem)) {
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                //Computing result
+                ArrayList<Currency> currencies = myCurrencies.getCurrencies();
+                for (int i = 0; i < currencies.size(); i++) {
+                    if (currencies.get(i).getName().equalsIgnoreCase(fromListViewItem)) {
+                        double rate = Double.parseDouble(currencies.get(i).getRate());
+                        for (int j = 0; j < currencies.size(); j++) {
+                            if (currencies.get(j).getName().equalsIgnoreCase(toListViewItem)) {
+                                if (amount.getText().toString() != null && !amount.getText().toString().equals("")) {
                                     double amountToConvert = Double.parseDouble(amount.getText().toString());
                                     double doubleResult = (amountToConvert / rate) * Double.parseDouble(currencies.get(j).getRate());
                                     String showResult = String.format("%.1f", doubleResult);
                                     result.setText(amountToConvert + " " + currencies.get(i).getName() + " --> " + currencies.get(j).getName() + " = " + showResult);
-                                    amount.setText("");
+                                    System.out.println("afterTextChanged");
                                     break;
+                                } else {
+                                    result.setText("Result goes here");
                                 }
                             }
                         }
                     }
-                    //Handling user input
-                } else if (fromAmount.length() == 0 && (toListViewItem == null || fromListViewItem == null)) {
-                    Toast.makeText(getApplicationContext(), "Choose currencies and enter amount", Toast.LENGTH_SHORT).show();
-                    result.setText("Result goes here");
-                } else if(fromAmount.length() == 0 && (toListViewItem != null & fromListViewItem != null)) {
-                    Toast.makeText(getApplicationContext(), "Enter amount", Toast.LENGTH_SHORT).show();
-                    result.setText("Result goes here");
-                } else if(fromAmount.length() > 0 && (toListViewItem == null || fromListViewItem == null)){
-                    Toast.makeText(getApplicationContext(), "Choose currencies", Toast.LENGTH_SHORT).show();
-                    result.setText("Result goes here");
                 }
             }
         });
@@ -242,19 +248,13 @@ public class MainActivity extends AppCompatActivity {
 
         outState.putBoolean("IS_SORTED_AZ", isSortedAZ);
         outState.putLong("TIME_BETWEEN_UPDATES", timeBetweenUpdates);
-
-//        fromListViewState = fromListView.onSaveInstanceState();
-//        toListViewState = toListView.onSaveInstanceState();
-
-//        outState.putParcelable("fromListViewState", fromListViewState);
-//        outState.putParcelable("toListViewState", toListViewState);
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
         System.out.println();
-        if(savedInstanceState != null) {
+        if (savedInstanceState != null) {
             System.out.println("MainActivity.. onRestoreInstanceState..");
 
             fromListViewItem = savedInstanceState.getString("FROM_LIST_VIEW_ITEM");
@@ -269,17 +269,8 @@ public class MainActivity extends AppCompatActivity {
             fromListViewPosition = savedInstanceState.getInt("FROM_LIST_POSITION");
             toListViewPosition = savedInstanceState.getInt("TO_LIST_POSITION");
 
-    //        fromListView.getChildAt(fromListViewPosition).setSelected(true);
-    //        toListView.getChildAt(toListViewPosition).setSelected(true);
-
             isSortedAZ = savedInstanceState.getBoolean("IS_SORTED_AZ");
             timeBetweenUpdates = savedInstanceState.getLong("TIME_BETWEEN_UPDATES");
-
-//            fromListView = savedInstanceState.getParcelable("fromListViewState");
-//            toListView = savedInstanceState.getParcelable("toListViewState");
-
-//            fromListView.onRestoreInstanceState(fromListViewState);
-//            toListView.onRestoreInstanceState(toListViewState);
         }
     }
 
@@ -287,9 +278,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         System.out.println("MainActivity.. onStop..");
         super.onStop();
-        if(getDataFromInternet != null)
+        if (getDataFromInternet != null)
             getDataFromInternet.cancel(true);
-        if(getDataFromLocalFile != null)
+        if (getDataFromLocalFile != null)
             getDataFromLocalFile.cancel(true);
     }
 
@@ -318,32 +309,33 @@ public class MainActivity extends AppCompatActivity {
                 InputStreamReader inputStreamReader = new InputStreamReader(tempFileInputStream);
                 BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
                 String timeInLongString = bufferedReader.readLine();
-                double timeInLong = Double.parseDouble(timeInLongString);
+                double timeInDouble = Double.parseDouble(timeInLongString);
+                timeInLong = Long.parseLong(timeInLongString);
 
-                System.out.println("Hours before next update: " + TimeUnit.MILLISECONDS.toHours((long) timeInLong + TimeUnit.DAYS.toMillis(1) - new Date().getTime()));
-                System.out.println("Minutes since last update: " + TimeUnit.MILLISECONDS.toMinutes((long) (new Date().getTime() - timeInLong)));
+                System.out.println("Hours before next update: " + TimeUnit.MILLISECONDS.toHours((long) timeInDouble + TimeUnit.DAYS.toMillis(1) - new Date().getTime()));
+                System.out.println("Minutes since last update: " + TimeUnit.MILLISECONDS.toMinutes((long) (new Date().getTime() - timeInDouble)));
 
                 //(FILE EXISTS) and (file is up to date) or (we are NOT connected to the Internet)
-                if (timeInLong + timeBetweenUpdates > new Date().getTime() || !isConnected) {
+                if (timeInDouble + timeBetweenUpdates > new Date().getTime() || !isConnected) {
                     System.out.println("(FILE EXISTS) and (file is up to date) or (we are NOT connected to the Internet)\n");
                     fileInputStream = openFileInput("Data");
-                    getDataFromLocalFile = new GetDataFromLocalFile(getApplicationContext(), fileInputStream, isSortedAZ);
-                    getDataFromLocalFile.execute(currencies, listViewData, fromListViewAdapter, toListViewAdapter);
+                    getDataFromLocalFile = new GetDataFromLocalFile(fileInputStream, this);
+                    getDataFromLocalFile.execute();
                     Toast.makeText(getApplicationContext(), "Warning! \nData might be out of date!", Toast.LENGTH_SHORT).show();
                 }
                 //(FILE EXISTS) and (file is NOT up to date) and (we are connected to the Internet)
                 else if (isConnected) {
                     System.out.println("(FILE EXISTS) and (file is NOT up to date) and (we are connected to the Internet)");
                     outputStream = openFileOutput("Data", Context.MODE_PRIVATE);
-                    getDataFromInternet = new GetDataFromInternet(getApplicationContext(), isSortedAZ);
-                    getDataFromInternet.execute(currencies, listViewData, outputStream, fromListViewAdapter, toListViewAdapter);
+                    getDataFromInternet = new GetDataFromInternet(this);
+                    getDataFromInternet.execute(outputStream);
                 }
                 //(FILE DOESN'T EXIST) and (we are connected to the Internet)
             } else if (isConnected) {
                 System.out.println("(FILE DOESN'T EXIST) and (we are connected to the Internet)\n");
                 outputStream = openFileOutput("Data", Context.MODE_PRIVATE);
-                getDataFromInternet = new GetDataFromInternet(getApplicationContext(), isSortedAZ);
-                getDataFromInternet.execute(currencies, listViewData, outputStream, fromListViewAdapter, toListViewAdapter);
+                getDataFromInternet = new GetDataFromInternet(this);
+                getDataFromInternet.execute(outputStream);
                 //(FILE DOESN'T EXIST) and (we are NOT connected to the Internet)
             } else if (!isConnected) {
                 System.out.println("(FILE DOESN'T EXIST) and (we are NOT connected to the Internet)\n");
@@ -388,19 +380,19 @@ public class MainActivity extends AppCompatActivity {
 
         System.out.println("MainActivity.. onActivityResult..");
 
-        if(requestCode == REQUEST_CODE_SETTINGS) {
-            if(resultCode == RESULT_OK) {
+        if (requestCode == REQUEST_CODE_SETTINGS) {
+            if (resultCode == RESULT_OK) {
 
                 isSortedAZ = data.getBooleanExtra("isSortedAZ", false);
                 System.out.println("GOT MainActivity.. onActivityResult.. isSortedAZ: " + isSortedAZ);
 
-                if(isSortedAZ) {
-                    Collections.sort(listViewData);
+                if (isSortedAZ) {
+                    Collections.sort(myCurrencies.getList(isSortedAZ));
                     fromListViewAdapter.notifyDataSetChanged();
                     toListViewAdapter.notifyDataSetChanged();
                 } else {
-                    Collections.sort(listViewData);
-                    Collections.reverse(listViewData);
+                    Collections.sort(myCurrencies.getList(isSortedAZ));
+                    Collections.reverse(myCurrencies.getList(isSortedAZ));
                     fromListViewAdapter.notifyDataSetChanged();
                     toListViewAdapter.notifyDataSetChanged();
                 }
@@ -409,7 +401,7 @@ public class MainActivity extends AppCompatActivity {
                 long intentTimeDataInHoursLong = Math.round(intentTimeDataInHours);
                 System.out.println("GOT MainActivity.. onActivityResult.. intentTimeDataInHours: " + intentTimeDataInHours);
 
-                if(timeBetweenUpdates == -1) {
+                if (timeBetweenUpdates == -1) {
                     timeBetweenUpdates = TimeUnit.HOURS.toMillis(24);
                 } else {
                     timeBetweenUpdates = TimeUnit.HOURS.toMillis(intentTimeDataInHoursLong);
@@ -417,5 +409,42 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    public void updateUI(ArrayList<Currency> currencies) {
+
+        myCurrencies = new Currencies(currencies);
+        System.out.println(currencies);
+
+        fromListViewAdapter.clear();
+        fromListViewAdapter.addAll(myCurrencies.getList(isSortedAZ));
+        fromListViewAdapter.notifyDataSetChanged();
+
+        toListViewAdapter.clear();
+        toListViewAdapter.addAll(myCurrencies.getList(isSortedAZ));
+        toListViewAdapter.notifyDataSetChanged();
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String DateToStr = format.format(myCurrencies.getTimestamp());
+
+        this.date.setText(DateToStr);
+    }
+
+    public void updateUILocal(ArrayList<Currency> currencies) {
+
+        myCurrencies = new Currencies(new Date(timeInLong), currencies);
+
+        fromListViewAdapter.clear();
+        fromListViewAdapter.addAll(myCurrencies.getList(isSortedAZ));
+        fromListViewAdapter.notifyDataSetChanged();
+
+        toListViewAdapter.clear();
+        toListViewAdapter.addAll(myCurrencies.getList(isSortedAZ));
+        toListViewAdapter.notifyDataSetChanged();
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String DateToStr = format.format(myCurrencies.getTimestamp());
+
+        this.date.setText(DateToStr);
     }
 }

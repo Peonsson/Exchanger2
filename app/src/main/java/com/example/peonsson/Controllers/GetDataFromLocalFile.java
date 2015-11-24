@@ -16,34 +16,22 @@ import Models.Currency;
 /**
  * Created by Peonsson on 2015-11-19.
  */
-public class GetDataFromLocalFile extends AsyncTask<Object,Void,ArrayList<String>> {
+public class GetDataFromLocalFile extends AsyncTask<Object,Void,ArrayList<Currency>> {
 
-    private final Context context;
-    private final boolean isSortedAZ;
-    private ArrayList<Currency> currencies;
+    private final MainActivity activity;
     private FileInputStream fileInputStream;
-    private ArrayList<String> listViewData;
-    private ArrayAdapter<String> fromListViewAdapter;
-    private ArrayAdapter<String> toListViewAdapter;
-    private ArrayList<String> tempListViewData = new ArrayList<String>(25);
+    private ArrayList<Currency> tempCurrencices = new ArrayList<Currency>(25);
 
-    public GetDataFromLocalFile(Context context, FileInputStream fileInputStream, boolean isSortedAZ) {
-        this.context = context;
+    public GetDataFromLocalFile(FileInputStream fileInputStream, MainActivity activity) {
         this.fileInputStream = fileInputStream;
-        this.isSortedAZ = isSortedAZ;
+        this.activity = activity;
     }
 
     @Override
-    protected ArrayList<String> doInBackground(Object... params) {
+    protected ArrayList<Currency> doInBackground(Object... params) {
         System.out.println("Executing.. GetDataFromLocalFile.. doInBackground..");
 
-        currencies = (ArrayList<Currency>) params[0];
-        listViewData = (ArrayList<String>) params[1];
-        fromListViewAdapter = (ArrayAdapter<String>) params[2];
-        toListViewAdapter = (ArrayAdapter<String>) params[3];
-        currencies.clear();
-        currencies.add(new Currency("EUR", "1"));
-        tempListViewData.add("EUR");
+        tempCurrencices.add(new Currency("USD", "1"));
 
         try {
             InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
@@ -54,40 +42,20 @@ public class GetDataFromLocalFile extends AsyncTask<Object,Void,ArrayList<String
                 if(parts.length == 2) {
                     String name = parts[0];
                     String rate = parts[1];
-                    currencies.add(new Currency(name, rate));
-                    tempListViewData.add(name);
+                    tempCurrencices.add(new Currency(name, rate));
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return tempListViewData;
+        return tempCurrencices;
     }
 
     @Override
-    protected void onPostExecute(ArrayList<String> strings) {
+    protected void onPostExecute(ArrayList<Currency> strings) {
         super.onPostExecute(strings);
         System.out.println("GetDataFromLocalFile.. onPostExecute..");
-
-        if(isSortedAZ) {
-            Collections.sort(strings);
-        } else {
-            Collections.sort(strings);
-            Collections.reverse(strings);
-        }
-
-        System.out.println(strings);
-//        listViewData = tempListViewData;
-
-//        fromListViewAdapter = new CustomAdapter(context, strings);
-        fromListViewAdapter.clear();
-        fromListViewAdapter.addAll(strings);
-        fromListViewAdapter.notifyDataSetChanged();
-
-//        toListViewAdapter = new CustomAdapter(context, strings);
-        toListViewAdapter.clear();
-        toListViewAdapter.addAll(strings);
-        toListViewAdapter.notifyDataSetChanged();
+        activity.updateUILocal(strings);
 
         try {
             fileInputStream.close();
